@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LEK-TestLab2</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hero">
+        <p class="eyebrow">LEK-TestLab2</p>
+        <h1>Playwright-sannhet. Ingen ekstra motor.</h1>
+        <p class="intro">
+          Dashboardet viser kun det GitHub Actions og Playwright allerede vet om siste testkjøring.
+        </p>
+        <div id="run-summary" class="summary-grid" aria-live="polite"></div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Resultater</p>
+            <h2>Siste kjøring</h2>
+          </div>
+          <div id="run-links" class="link-row"></div>
+        </div>
+        <div id="run-meta" class="meta-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Testliste</p>
+            <h2>Pass, fail og skip</h2>
+          </div>
+        </div>
+        <div id="tests" class="test-list"></div>
+      </section>
+    </main>
+
+    <template id="test-card-template">
+      <article class="test-card">
+        <div class="test-top">
+          <span class="status-pill"></span>
+          <span class="project-pill"></span>
+        </div>
+        <h3 class="test-title"></h3>
+        <p class="test-file"></p>
+        <div class="detail-grid"></div>
+        <div class="attachment-row"></div>
+        <pre class="fix-prompt"></pre>
+      </article>
+    </template>
+
+    <script type="module" src="./assets/app.js"></script>
+  </body>
+</html>

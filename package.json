@@ -1,0 +1,14 @@
+{
+  "name": "lek-testlab2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "build:pages": "node scripts/publish-pages.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "@types/node": "^24.0.13"
+  }
+}
