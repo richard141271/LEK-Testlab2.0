@@ -1,16 +1,14 @@
 # LEK-TestLab2
 
-LEK-TestLab2 er et enkelt GitHub Pages-dashboard som viser det Playwright allerede har produsert i GitHub Actions.
+LEK-TestLab2 er et enkelt dashboard som starter GitHub Actions, viser Playwright-resultater og lager fiksprompter for LEK-Biens Vokter.
 
 ## Prinsipper
 
-- Ingen backend
-- Ingen egen testmotor
-- Ingen egen rapportmotor
 - `workflow_dispatch` styrer kjøringen
 - GitHub Actions kjører testene
 - Playwright leverer rapportene
 - Dashboardet viser kun sannheten
+- Dashboardet skjuler GitHub-tokenet fra brukeren ved a bruke server-side oppsett
 
 ## Hva dashboardet viser
 
@@ -24,30 +22,27 @@ LEK-TestLab2 er et enkelt GitHub Pages-dashboard som viser det Playwright allere
 
 ## Test na-knapp
 
-- Dashboardet har en `Test na`-knapp som starter eksisterende `workflow_dispatch` direkte i GitHub Actions.
-- Forste gang ma du lime inn en GitHub-token med tilgang til Actions i repoet.
-- Tokenet lagres kun i din egen nettleser for enklere gjenbruk.
-- Løsningen bruker ingen backend og bygger ikke egen kjorelogikk.
+- Dashboardet har en `Test na`-knapp som starter eksisterende `workflow_dispatch`.
+- GitHub-token ligger pa serveren, ikke i dashboardet.
+- Dashboardet folger kjoringen og henter resultatene tilbake automatisk.
+- `FAIL` viser feiltekst, vedlegg og ferdig fiksprompt for produktfiks.
 
 ## Lokal bruk
 
 ```bash
 npm install
+GITHUB_TOKEN=din_github_token npm start
 npx playwright install chromium
 npm run test:e2e
 npm run build:pages
 ```
 
-Åpne deretter `.site/index.html` i nettleseren.
+Åpne deretter `http://localhost:3000`.
 
-## GitHub Pages
+## Miljo
 
-1. Push repoet til GitHub.
-2. Gå til `Settings` -> `Pages`.
-3. Sett `Source` til `GitHub Actions`.
-4. Kjør workflowen `LEK-TestLab2` manuelt via `workflow_dispatch`.
-
-Når workflowen er ferdig, publiseres siste Playwright-kjøring til GitHub Pages.
+- `GITHUB_TOKEN`: server-side token med tilgang til a starte Actions og lese workflow-runs
+- `PAGES_BASE_URL`: offentlig URL der publiserte Playwright-resultater ligger
 
 ## Viktig
 
