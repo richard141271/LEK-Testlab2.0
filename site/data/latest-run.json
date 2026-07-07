@@ -1,0 +1,16 @@
+{
+  "runId": "not-run-yet",
+  "runNumber": "0",
+  "commitSha": "main",
+  "shortSha": "main",
+  "generatedAt": "2026-07-05T00:00:00.000Z",
+  "runUrl": "",
+  "summary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "reportPath": null,
+  "htmlReportPath": null
+}
