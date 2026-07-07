@@ -22,6 +22,13 @@ LEK-TestLab2 er et enkelt GitHub Pages-dashboard som viser det Playwright allere
 - Hva som kan sjekkes manuelt
 - Ved `FAIL`: feiltekst, sted, screenshot, video, trace og ferdig fiksprompt
 
+## Test na-knapp
+
+- Dashboardet har en `Test na`-knapp som starter eksisterende `workflow_dispatch` direkte i GitHub Actions.
+- Forste gang ma du lime inn en GitHub-token med tilgang til Actions i repoet.
+- Tokenet lagres kun i din egen nettleser for enklere gjenbruk.
+- Løsningen bruker ingen backend og bygger ikke egen kjorelogikk.
+
 ## Lokal bruk
 
 ```bash

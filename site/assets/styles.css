@@ -86,6 +86,87 @@ p {
   line-height: 1.5;
 }
 
+.trigger-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr);
+  gap: 18px;
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.trigger-copy,
+.trigger-status {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.trigger-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #0d1326;
+  color: var(--text);
+  font: inherit;
+}
+
+.trigger-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.primary-button,
+.secondary-button {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #6c5ce7, #3d8bfd);
+}
+
+.secondary-button {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.trigger-status[data-tone="success"] {
+  color: var(--pass);
+}
+
+.trigger-status[data-tone="error"] {
+  color: var(--fail);
+}
+
 .summary-grid,
 .meta-grid,
 .detail-grid,
@@ -212,6 +293,10 @@ p {
 @media (max-width: 700px) {
   .app {
     padding: 20px 14px 40px;
+  }
+
+  .trigger-panel {
+    grid-template-columns: 1fr;
   }
 
   .hero,

@@ -3,6 +3,18 @@ const metaContainer = document.querySelector('#run-meta');
 const testsContainer = document.querySelector('#tests');
 const linksContainer = document.querySelector('#run-links');
 const template = document.querySelector('#test-card-template');
+const tokenInput = document.querySelector('#github-token');
+const triggerButton = document.querySelector('#trigger-test');
+const clearTokenButton = document.querySelector('#clear-token');
+const triggerStatus = document.querySelector('#trigger-status');
+
+const githubConfig = {
+  owner: 'richard141271',
+  repo: 'LEK-Testlab2.0',
+  workflowId: 'testlab-pages.yml',
+  branch: 'main',
+  tokenStorageKey: 'lek-testlab2-github-token'
+};
 
 function createMetric(label, value) {
   const element = document.createElement('div');
@@ -23,6 +35,22 @@ function emptyState(message) {
   element.className = 'empty';
   element.textContent = message;
   return element;
+}
+
+function setTriggerStatus(message, tone = 'default') {
+  triggerStatus.textContent = message;
+  if (tone === 'default') {
+    delete triggerStatus.dataset.tone;
+    return;
+  }
+
+  triggerStatus.dataset.tone = tone;
+}
+
+function setTriggerBusy(isBusy) {
+  triggerButton.disabled = isBusy;
+  clearTokenButton.disabled = isBusy;
+  tokenInput.disabled = isBusy;
 }
 
 function relativeAssetPath(assetPath) {
@@ -219,6 +247,91 @@ function renderTests(items, run) {
   testsContainer.replaceChildren(...cards);
 }
 
+function getStoredToken() {
+  return window.localStorage.getItem(githubConfig.tokenStorageKey) || '';
+}
+
+function storeToken(value) {
+  window.localStorage.setItem(githubConfig.tokenStorageKey, value);
+}
+
+function clearStoredToken() {
+  window.localStorage.removeItem(githubConfig.tokenStorageKey);
+}
+
+async function triggerWorkflow() {
+  const token = tokenInput.value.trim();
+  if (!token) {
+    setTriggerStatus('Legg inn en GitHub-token for a starte testene.', 'error');
+    tokenInput.focus();
+    return;
+  }
+
+  setTriggerBusy(true);
+  setTriggerStatus('Starter LEK-Biens Vokter-testene i GitHub Actions ...');
+
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/actions/workflows/${githubConfig.workflowId}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ref: githubConfig.branch
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(errorBody || `GitHub svarte med ${response.status}`);
+    }
+
+    storeToken(token);
+    setTriggerStatus('Testene er startet. Apner GitHub Actions i ny fane ...', 'success');
+    window.open(
+      `https://github.com/${githubConfig.owner}/${githubConfig.repo}/actions/workflows/${githubConfig.workflowId}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Ukjent feil ved start av workflow.';
+    setTriggerStatus(`Kunne ikke starte testene: ${message}`, 'error');
+  } finally {
+    setTriggerBusy(false);
+  }
+}
+
+function setupTriggerPanel() {
+  const storedToken = getStoredToken();
+  if (storedToken) {
+    tokenInput.value = storedToken;
+    setTriggerStatus('Klar til a starte testene. Lagret token er lastet inn.');
+  }
+
+  tokenInput.addEventListener('change', () => {
+    const token = tokenInput.value.trim();
+    if (token) {
+      storeToken(token);
+      setTriggerStatus('Token lagret lokalt. Trykk Test na for a kjore workflowen.');
+    }
+  });
+
+  triggerButton.addEventListener('click', () => {
+    triggerWorkflow();
+  });
+
+  clearTokenButton.addEventListener('click', () => {
+    clearStoredToken();
+    tokenInput.value = '';
+    setTriggerStatus('Lagret token er slettet fra denne nettleseren.');
+  });
+}
+
 async function loadDashboard() {
   try {
     const latestRunResponse = await fetch('./data/latest-run.json', { cache: 'no-store' });
@@ -246,4 +359,5 @@ async function loadDashboard() {
   }
 }
 
+setupTriggerPanel();
 loadDashboard();
