@@ -7,6 +7,7 @@ const tokenInput = document.querySelector('#github-token');
 const triggerButton = document.querySelector('#trigger-test');
 const clearTokenButton = document.querySelector('#clear-token');
 const triggerStatus = document.querySelector('#trigger-status');
+const triggerDetails = document.querySelector('#trigger-details');
 
 const githubConfig = {
   owner: 'richard141271',
@@ -15,6 +16,8 @@ const githubConfig = {
   branch: 'main',
   tokenStorageKey: 'lek-testlab2-github-token'
 };
+
+let activeSessionId = 0;
 
 function createMetric(label, value) {
   const element = document.createElement('div');
@@ -51,6 +54,47 @@ function setTriggerBusy(isBusy) {
   triggerButton.disabled = isBusy;
   clearTokenButton.disabled = isBusy;
   tokenInput.disabled = isBusy;
+}
+
+function renderTriggerDetails(items = []) {
+  if (!items.length) {
+    triggerDetails.replaceChildren();
+    return;
+  }
+
+  triggerDetails.replaceChildren(...items.map((item) => createDetail(item.label, item.value)));
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function withTimestamp(url) {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}ts=${Date.now()}`;
+}
+
+function createGitHubHeaders(token) {
+  return {
+    Accept: 'application/vnd.github+json',
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  };
+}
+
+async function fetchGitHubJson(url, token) {
+  const response = await fetch(url, {
+    headers: createGitHubHeaders(token)
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(errorBody || `GitHub svarte med ${response.status}`);
+  }
+
+  return response.json();
 }
 
 function relativeAssetPath(assetPath) {
@@ -111,6 +155,20 @@ function formatDate(value) {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(new Date(value));
+}
+
+function formatRunStatus(run) {
+  if (run.status === 'queued') return 'I ko';
+  if (run.status === 'in_progress') return 'Kjorer';
+  if (run.status === 'completed') {
+    if (run.conclusion === 'success') return 'Fullfort';
+    if (run.conclusion === 'failure') return 'Feilet';
+    if (run.conclusion === 'cancelled') return 'Avbrutt';
+    if (run.conclusion === 'skipped') return 'Hoppet over';
+    return run.conclusion || 'Fullfort';
+  }
+
+  return run.status || 'Ukjent';
 }
 
 function toFixPrompt(test, run) {
@@ -259,6 +317,110 @@ function clearStoredToken() {
   window.localStorage.removeItem(githubConfig.tokenStorageKey);
 }
 
+async function fetchLatestWorkflowRun(token) {
+  const response = await fetchGitHubJson(
+    `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/actions/workflows/${githubConfig.workflowId}/runs?branch=${githubConfig.branch}&event=workflow_dispatch&per_page=5`,
+    token
+  );
+
+  return response.workflow_runs?.[0] || null;
+}
+
+async function fetchWorkflowRun(token, runId) {
+  return fetchGitHubJson(
+    `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/actions/runs/${runId}`,
+    token
+  );
+}
+
+async function waitForTriggeredRun(token, previousRunId, startedAt, sessionId) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (sessionId !== activeSessionId) return null;
+
+    const latestRun = await fetchLatestWorkflowRun(token);
+    const createdAt = latestRun ? new Date(latestRun.created_at).getTime() : 0;
+    const isNewRun =
+      latestRun &&
+      String(latestRun.id) !== String(previousRunId || '') &&
+      createdAt >= startedAt - 15000;
+
+    if (isNewRun) {
+      return latestRun;
+    }
+
+    setTriggerStatus('Testen blir opprettet i GitHub Actions ...', 'running');
+    renderTriggerDetails([
+      { label: 'Branch', value: githubConfig.branch },
+      { label: 'Status', value: 'Venter pa ny kjoring' },
+      { label: 'Forsok', value: String(attempt + 1) }
+    ]);
+    await delay(3000);
+  }
+
+  throw new Error('Fant ingen ny workflow-kjoring. Sjekk at tokenet har tilgang til Actions.');
+}
+
+async function waitForPublishedResults(expectedRun, sessionId) {
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    if (sessionId !== activeSessionId) return false;
+
+    const latestRun = await fetchLatestRunMetadata();
+    const sameRun =
+      String(latestRun.runId || '') === String(expectedRun.id) ||
+      String(latestRun.runNumber || '') === String(expectedRun.run_number || '');
+
+    if (sameRun) {
+      await loadDashboard({ latestRun });
+      renderTriggerDetails([
+        { label: 'Kjoring', value: `#${latestRun.runNumber || expectedRun.run_number}` },
+        { label: 'Status', value: 'Resultater lastet inn' },
+        { label: 'Commit', value: latestRun.shortSha || 'Ukjent' }
+      ]);
+      setTriggerStatus('Resultatene er lastet inn i dashboardet.', 'success');
+      return true;
+    }
+
+    setTriggerStatus('Testen er ferdig. Venter pa at dashboarddata publiseres ...', 'running');
+    renderTriggerDetails([
+      { label: 'Kjoring', value: `#${expectedRun.run_number}` },
+      { label: 'Status', value: 'Publiserer resultater' },
+      { label: 'Forsok', value: String(attempt + 1) }
+    ]);
+    await delay(5000);
+  }
+
+  setTriggerStatus('Testen er ferdig, men GitHub Pages er ikke oppdatert enna. Vent litt og trykk oppdater.', 'error');
+  return false;
+}
+
+async function monitorWorkflowRun(token, initialRun, sessionId) {
+  let currentRun = initialRun;
+
+  while (sessionId === activeSessionId) {
+    currentRun = await fetchWorkflowRun(token, currentRun.id);
+    renderTriggerDetails([
+      { label: 'Kjoring', value: `#${currentRun.run_number}` },
+      { label: 'Status', value: formatRunStatus(currentRun) },
+      { label: 'Sist oppdatert', value: formatDate(currentRun.updated_at) }
+    ]);
+
+    if (currentRun.status === 'completed') {
+      setTriggerStatus(`Testen er ferdig med status ${formatRunStatus(currentRun)}. Henter Playwright-resultater ...`, 'running');
+      await waitForPublishedResults(currentRun, sessionId);
+      return;
+    }
+
+    setTriggerStatus(`LEK-Biens Vokter testes na. Status: ${formatRunStatus(currentRun)}.`, 'running');
+    await delay(5000);
+  }
+}
+
+async function fetchLatestRunMetadata() {
+  const latestRunResponse = await fetch(withTimestamp('./data/latest-run.json'), { cache: 'no-store' });
+  if (!latestRunResponse.ok) throw new Error('Kunne ikke lese latest-run.json');
+  return latestRunResponse.json();
+}
+
 async function triggerWorkflow() {
   const token = tokenInput.value.trim();
   if (!token) {
@@ -267,19 +429,23 @@ async function triggerWorkflow() {
     return;
   }
 
+  const sessionId = Date.now();
+  activeSessionId = sessionId;
   setTriggerBusy(true);
-  setTriggerStatus('Starter LEK-Biens Vokter-testene i GitHub Actions ...');
+  setTriggerStatus('Starter LEK-Biens Vokter-testene i GitHub Actions ...', 'running');
+  renderTriggerDetails([
+    { label: 'Branch', value: githubConfig.branch },
+    { label: 'Status', value: 'Sender workflow_dispatch' }
+  ]);
 
   try {
+    const previousRun = await fetchLatestWorkflowRun(token);
+    const startedAt = Date.now();
     const response = await fetch(
       `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/actions/workflows/${githubConfig.workflowId}/dispatches`,
       {
         method: 'POST',
-        headers: {
-          Accept: 'application/vnd.github+json',
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: createGitHubHeaders(token),
         body: JSON.stringify({
           ref: githubConfig.branch
         })
@@ -292,17 +458,17 @@ async function triggerWorkflow() {
     }
 
     storeToken(token);
-    setTriggerStatus('Testene er startet. Apner GitHub Actions i ny fane ...', 'success');
-    window.open(
-      `https://github.com/${githubConfig.owner}/${githubConfig.repo}/actions/workflows/${githubConfig.workflowId}`,
-      '_blank',
-      'noopener,noreferrer'
-    );
+    const createdRun = await waitForTriggeredRun(token, previousRun?.id, startedAt, sessionId);
+    if (!createdRun) return;
+
+    await monitorWorkflowRun(token, createdRun, sessionId);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Ukjent feil ved start av workflow.';
     setTriggerStatus(`Kunne ikke starte testene: ${message}`, 'error');
   } finally {
-    setTriggerBusy(false);
+    if (sessionId === activeSessionId) {
+      setTriggerBusy(false);
+    }
   }
 }
 
@@ -334,9 +500,7 @@ function setupTriggerPanel() {
 
 async function loadDashboard() {
   try {
-    const latestRunResponse = await fetch('./data/latest-run.json', { cache: 'no-store' });
-    if (!latestRunResponse.ok) throw new Error('Kunne ikke lese latest-run.json');
-    const latestRun = await latestRunResponse.json();
+    const latestRun = await fetchLatestRunMetadata();
 
     renderRunSummary(latestRun);
 
@@ -347,7 +511,7 @@ async function loadDashboard() {
       return;
     }
 
-    const reportResponse = await fetch(`./${latestRun.reportPath}`, { cache: 'no-store' });
+    const reportResponse = await fetch(withTimestamp(`./${latestRun.reportPath}`), { cache: 'no-store' });
     if (!reportResponse.ok) throw new Error('Kunne ikke lese Playwright JSON-rapporten');
     const report = await reportResponse.json();
     const tests = collectTests(report.suites || []);

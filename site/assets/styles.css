@@ -108,6 +108,10 @@ p {
   gap: 12px;
 }
 
+.trigger-controls .meta-grid {
+  margin-top: 0;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -165,6 +169,10 @@ p {
 
 .trigger-status[data-tone="error"] {
   color: var(--fail);
+}
+
+.trigger-status[data-tone="running"] {
+  color: #8cc8ff;
 }
 
 .summary-grid,
