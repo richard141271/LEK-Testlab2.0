@@ -3,8 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>LEK-TestLab2</title>
-    <link rel="stylesheet" href="./assets/styles.css" />
+    <link rel="stylesheet" href="./assets/styles.css?v=server-20260714-1" />
   </head>
   <body>
     <main class="app">
@@ -14,6 +17,7 @@
         <p class="intro">
           Dashboardet viser kun det GitHub Actions og Playwright allerede vet om siste testkjoring.
         </p>
+        <p class="build-note">Serverutgave uten tokenfelt i dashboardet.</p>
         <section class="trigger-panel" aria-labelledby="trigger-title">
           <div>
             <p class="eyebrow">Kjor Testing</p>
@@ -72,6 +76,6 @@
       </article>
     </template>
 
-    <script type="module" src="./assets/app.js"></script>
+    <script type="module" src="./assets/app.js?v=server-20260714-1"></script>
   </body>
 </html>

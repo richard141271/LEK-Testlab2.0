@@ -86,6 +86,12 @@ p {
   line-height: 1.5;
 }
 
+.build-note {
+  margin-top: 12px;
+  color: #bfe2ff;
+  font-size: 0.95rem;
+}
+
 .trigger-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr);

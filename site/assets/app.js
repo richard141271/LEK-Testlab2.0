@@ -419,9 +419,15 @@ async function setupTriggerPanel() {
   } catch (error) {
     setTriggerBusy(true);
     setTriggerStatus(
-      error instanceof Error ? `Kunne ikke koble til serveren: ${error.message}` : 'Kunne ikke koble til serveren.',
+      error instanceof Error
+        ? `Denne siden mangler testserver akkurat na: ${error.message}`
+        : 'Denne siden mangler testserver akkurat na.',
       'error'
     );
+    renderTriggerDetails([
+      { label: 'Status', value: 'Knappen er midlertidig deaktivert' },
+      { label: 'Aarsak', value: 'Serverdelen svarer ikke pa /api' }
+    ]);
   }
 }
 
