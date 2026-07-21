@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: lek-testlab2-dashboard
+    runtime: node
+    branch: main
+    autoDeploy: true
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        value: richard141271
+      - key: GITHUB_REPO
+        value: LEK-Testlab2.0
+      - key: GITHUB_WORKFLOW_ID
+        value: testlab-pages.yml
+      - key: GITHUB_BRANCH
+        value: main
+      - key: PAGES_BASE_URL
+        value: https://richard141271.github.io/LEK-Testlab2.0

@@ -160,6 +160,15 @@ function latestRunMatchesWorkflow(latestRun, workflowRun) {
   );
 }
 
+app.get('/health', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'LEK-TestLab2',
+    branch: config.branch,
+    hasServerTrigger: Boolean(config.githubToken)
+  });
+});
+
 app.get('/api/config', (_req, res) => {
   res.json({
     branch: config.branch,
