@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>LEK-TestLab2</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=server-20260714-1" />
+    <link rel="stylesheet" href="./assets/styles.css?v=github-20260721-2" />
   </head>
   <body>
     <main class="app">
@@ -17,22 +17,21 @@
         <p class="intro">
           Dashboardet viser kun det GitHub Actions og Playwright allerede vet om siste testkjoring.
         </p>
-        <p class="build-note">Serverutgave uten tokenfelt i dashboardet.</p>
         <section class="trigger-panel" aria-labelledby="trigger-title">
           <div>
-            <p class="eyebrow">Kjor Testing</p>
-            <h2 id="trigger-title">Test na</h2>
+            <p class="eyebrow">Automatisk Testing</p>
+            <h2 id="trigger-title">GitHub tester for deg</h2>
             <p class="trigger-copy">
-              Trykk for a starte GitHub Actions-workflowen som tester LEK-Biens Vokter. Dashboardet folger
-              kjoringen og laster resultatene inn her nar de er klare.
+              LEK-Biens Vokter blir testet automatisk med GitHub Actions og Playwright nar du pusher til
+              `main`, og deretter jevnlig gjennom dagen. Dashboardet viser bare siste sannhet.
             </p>
           </div>
           <div class="trigger-controls">
             <div class="trigger-actions">
-              <button id="trigger-test" class="primary-button" type="button">Test na</button>
+              <a id="actions-link" class="primary-button" href="https://github.com/richard141271/LEK-Testlab2.0/actions" target="_blank" rel="noreferrer">Se testkjoringer i GitHub</a>
             </div>
             <p id="trigger-status" class="trigger-status" aria-live="polite">
-              Trykk Test na for a starte en ny kjoring.
+              Ingen token. Ingen ekstra server. GitHub Actions kjorer testene automatisk.
             </p>
             <div id="trigger-details" class="meta-grid"></div>
           </div>
@@ -76,6 +75,6 @@
       </article>
     </template>
 
-    <script type="module" src="./assets/app.js?v=server-20260714-1"></script>
+    <script type="module" src="./assets/app.js?v=github-20260721-2"></script>
   </body>
 </html>

@@ -3,14 +3,8 @@ const metaContainer = document.querySelector('#run-meta');
 const testsContainer = document.querySelector('#tests');
 const linksContainer = document.querySelector('#run-links');
 const template = document.querySelector('#test-card-template');
-const triggerButton = document.querySelector('#trigger-test');
 const triggerStatus = document.querySelector('#trigger-status');
 const triggerDetails = document.querySelector('#trigger-details');
-
-const state = {
-  config: null,
-  activeRunId: null
-};
 
 function createMetric(label, value) {
   const element = document.createElement('div');
@@ -43,10 +37,6 @@ function setTriggerStatus(message, tone = 'default') {
   triggerStatus.dataset.tone = tone;
 }
 
-function setTriggerBusy(isBusy) {
-  triggerButton.disabled = isBusy;
-}
-
 function renderTriggerDetails(items = []) {
   if (!items.length) {
     triggerDetails.replaceChildren();
@@ -60,31 +50,6 @@ function delay(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
   });
-}
-
-async function apiJson(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-
-  if (!response.ok) {
-    let message = '';
-    try {
-      const errorPayload = await response.json();
-      message = errorPayload.error || '';
-    } catch {
-      message = await response.text();
-    }
-
-    throw new Error(message || `Serveren svarte med ${response.status}`);
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
 }
 
 function relativeAssetPath(assetPath) {
@@ -103,10 +68,7 @@ function normalizeStatus(status) {
 function publicUrl(run, relativePath) {
   if (!relativePath) return null;
   if (/^https?:\/\//.test(relativePath)) return relativePath;
-
-  const base = (run.publicBaseUrl || '').replace(/\/$/, '');
-  const cleanPath = relativePath.replace(/^\/+/, '');
-  return base ? `${base}/${cleanPath}` : `./${cleanPath}`;
+  return `./${relativePath.replace(/^\/+/, '')}`;
 }
 
 function collectTests(suites, parentTitles = []) {
@@ -153,20 +115,6 @@ function formatDate(value) {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(new Date(value));
-}
-
-function formatRunStatus(run) {
-  if (run.status === 'queued') return 'I ko';
-  if (run.status === 'in_progress') return 'Kjorer';
-  if (run.status === 'completed') {
-    if (run.conclusion === 'success') return 'Fullfort';
-    if (run.conclusion === 'failure') return 'Feilet';
-    if (run.conclusion === 'cancelled') return 'Avbrutt';
-    if (run.conclusion === 'skipped') return 'Hoppet over';
-    return run.conclusion || 'Fullfort';
-  }
-
-  return run.status || 'Ukjent';
 }
 
 function toFixPrompt(test, run) {
@@ -257,7 +205,7 @@ function renderAttachments(container, test, run) {
 function renderTests(items, run) {
   if (!items.length) {
     testsContainer.replaceChildren(
-      emptyState('Ingen Playwright-resultater ble funnet. Trykk Test na for a starte en ny kjoring.')
+      emptyState('Ingen Playwright-resultater ble funnet ennå. GitHub Actions lager nye resultater automatisk.')
     );
     return;
   }
@@ -304,12 +252,21 @@ function renderTests(items, run) {
 }
 
 async function fetchLatestRunMetadata() {
-  return apiJson('/api/dashboard/latest');
+  const response = await fetch(`./data/latest-run.json?ts=${Date.now()}`, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error('Kunne ikke lese latest-run.json');
+  }
+
+  return response.json();
 }
 
 async function fetchReportJson(reportPath) {
-  const url = `/api/dashboard/report?path=${encodeURIComponent(reportPath)}`;
-  return apiJson(url);
+  const response = await fetch(`./${reportPath}?ts=${Date.now()}`, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error('Kunne ikke lese Playwright JSON-rapporten');
+  }
+
+  return response.json();
 }
 
 async function loadDashboard(latestRunOverride = null) {
@@ -319,7 +276,7 @@ async function loadDashboard(latestRunOverride = null) {
 
     if (!latestRun.reportPath) {
       testsContainer.replaceChildren(
-        emptyState('Ingen rapport publisert ennå. Trykk Test na for a kjore LEK-Biens Vokter.')
+        emptyState('Ingen rapport publisert ennå. Neste GitHub-kjoring fyller inn dashboardet automatisk.')
       );
       return;
     }
@@ -334,102 +291,30 @@ async function loadDashboard(latestRunOverride = null) {
   }
 }
 
-async function monitorWorkflowRun(runId) {
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    const statusPayload = await apiJson(`/api/run-status/${runId}`);
-    const workflowRun = statusPayload.run;
-
-    renderTriggerDetails([
-      { label: 'Kjoring', value: `#${workflowRun.run_number}` },
-      { label: 'Status', value: formatRunStatus(workflowRun) },
-      { label: 'Sist oppdatert', value: formatDate(workflowRun.updated_at) }
-    ]);
-
-    if (workflowRun.status !== 'completed') {
-      setTriggerStatus(`LEK-Biens Vokter testes na. Status: ${formatRunStatus(workflowRun)}.`, 'running');
-      await delay(5000);
-      continue;
-    }
-
-    if (statusPayload.dashboardReady && statusPayload.latestRun) {
-      await loadDashboard(statusPayload.latestRun);
-      setTriggerStatus('Resultatene er lastet inn i dashboardet.', 'success');
-      renderTriggerDetails([
-        { label: 'Kjoring', value: `#${statusPayload.latestRun.runNumber || workflowRun.run_number}` },
-        { label: 'Status', value: 'Ferdig' },
-        { label: 'Commit', value: statusPayload.latestRun.shortSha || 'Ukjent' }
-      ]);
-      setTriggerBusy(false);
-      return;
-    }
-
-    setTriggerStatus('Testen er ferdig. Venter pa at resultatene publiseres til dashboardet ...', 'running');
-    await delay(5000);
-  }
-
-  setTriggerStatus('Testen ble startet, men resultatene kom ikke inn i dashboardet tidsnok. Prover igjen om litt.', 'error');
-  setTriggerBusy(false);
+function setupTriggerPanel() {
+  renderTriggerDetails([
+    { label: 'Trigger', value: 'Push til main' },
+    { label: 'Ekstra kontroll', value: 'Workflow dispatch i GitHub' },
+    { label: 'Automatikk', value: 'Hver 30. minutt' }
+  ]);
+  setTriggerStatus('GitHub Actions og Playwright tester automatisk for deg. Dashboardet oppdaterer seg selv.', 'success');
 }
 
-async function triggerWorkflow() {
+async function refreshDashboardLoop() {
   try {
-    setTriggerBusy(true);
-    setTriggerStatus('Starter LEK-Biens Vokter-testene ...', 'running');
-    renderTriggerDetails([
-      { label: 'Status', value: 'Sender startsignal' },
-      { label: 'Type', value: 'GitHub Actions + Playwright' }
-    ]);
-
-    const response = await apiJson('/api/test-now', {
-      method: 'POST'
-    });
-
-    state.activeRunId = response.run.id;
-    await monitorWorkflowRun(response.run.id);
+    const latestRun = await fetchLatestRunMetadata();
+    await loadDashboard(latestRun);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Ukjent feil ved start av workflow.';
-    setTriggerStatus(`Kunne ikke starte testene: ${message}`, 'error');
-    setTriggerBusy(false);
-  }
-}
-
-async function setupTriggerPanel() {
-  try {
-    state.config = await apiJson('/api/config');
-
-    if (!state.config.hasServerTrigger) {
-      setTriggerBusy(true);
-      setTriggerStatus('Test na er ikke klar ennå. Serveren mangler GitHub-kobling.', 'error');
-      renderTriggerDetails([
-        { label: 'Branch', value: state.config.branch || 'main' },
-        { label: 'Status', value: 'Mangler serveroppsett' }
-      ]);
-      return;
-    }
-
-    setTriggerStatus('Trykk Test na for a starte en ny test av LEK-Biens Vokter.');
-    renderTriggerDetails([
-      { label: 'Branch', value: state.config.branch || 'main' },
-      { label: 'Status', value: 'Klar' }
-    ]);
-
-    triggerButton.addEventListener('click', () => {
-      triggerWorkflow();
-    });
-  } catch (error) {
-    setTriggerBusy(true);
     setTriggerStatus(
-      error instanceof Error
-        ? `Denne siden mangler testserver akkurat na: ${error.message}`
-        : 'Denne siden mangler testserver akkurat na.',
+      error instanceof Error ? `Kunne ikke oppdatere dashboardet akkurat na: ${error.message}` : 'Kunne ikke oppdatere dashboardet akkurat na.',
       'error'
     );
-    renderTriggerDetails([
-      { label: 'Status', value: 'Knappen er midlertidig deaktivert' },
-      { label: 'Aarsak', value: 'Serverdelen svarer ikke pa /api' }
-    ]);
   }
+
+  await delay(60000);
+  refreshDashboardLoop();
 }
 
 setupTriggerPanel();
 loadDashboard();
+refreshDashboardLoop();

@@ -86,12 +86,6 @@ p {
   line-height: 1.5;
 }
 
-.build-note {
-  margin-top: 12px;
-  color: #bfe2ff;
-  font-size: 0.95rem;
-}
-
 .trigger-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr);
@@ -125,6 +119,9 @@ p {
 }
 
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -132,6 +129,7 @@ p {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .primary-button {
