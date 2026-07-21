@@ -210,7 +210,20 @@ function renderTests(items, run) {
     return;
   }
 
-  const cards = items.map((test) => {
+  const sortedItems = [...items].sort((left, right) => {
+    const statusWeight = {
+      failed: 0,
+      skipped: 1,
+      passed: 2
+    };
+
+    const byStatus = statusWeight[left.status] - statusWeight[right.status];
+    if (byStatus !== 0) return byStatus;
+
+    return left.title.localeCompare(right.title, 'nb');
+  });
+
+  const cards = sortedItems.map((test) => {
     const fragment = template.content.cloneNode(true);
     const card = fragment.querySelector('.test-card');
     const status = fragment.querySelector('.status-pill');
@@ -227,14 +240,18 @@ function renderTests(items, run) {
     title.textContent = test.title;
     file.textContent = `${test.file}${test.line ? `:${test.line}` : ''}`;
 
-    const manualCheck = `Gjenta flyten "${test.title}" manuelt og sammenlign med commit ${run.shortSha}.`;
-    const verifiedText = test.status === 'passed' ? test.title : 'Flyten feilet og krever produktfiks.';
+    const manualCheck = `Gjenta flyten "${test.title}" manuelt i staging og sammenlign med commit ${run.shortSha}.`;
+    const verifiedText = test.status === 'passed' ? test.title : 'Flyten feilet i staging og krever produktfiks.';
+    const problemText =
+      test.status === 'failed'
+        ? test.errorText || 'Playwright registrerte en feil uten detaljert tekst.'
+        : 'Ingen feil registrert.';
 
     detailGrid.replaceChildren(
       createDetail('Hva ble verifisert', verifiedText),
       createDetail('Brukerhandling', test.title),
       createDetail('Manuell kontroll', manualCheck),
-      createDetail('Hva feilet', test.errorText || 'Ingen feiltekst registrert')
+      createDetail('Hva feilet', problemText)
     );
 
     renderAttachments(attachmentRow, test, run);
@@ -293,7 +310,7 @@ async function loadDashboard(latestRunOverride = null) {
 
 function setupTriggerPanel() {
   renderTriggerDetails([
-    { label: 'Trigger', value: 'Push til main' },
+    { label: 'Trigger', value: 'Push til staging' },
     { label: 'Ekstra kontroll', value: 'Workflow dispatch i GitHub' },
     { label: 'Automatikk', value: 'Hver 30. minutt' }
   ]);

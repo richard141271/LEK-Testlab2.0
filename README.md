@@ -5,7 +5,7 @@ LEK-TestLab2 er et enkelt GitHub Pages-dashboard som viser Playwright-resultater
 ## Prinsipper
 
 - `workflow_dispatch` styrer kjøringen
-- `push` til `main` styrer kjøringen
+- `push` til `staging` styrer kjøringen
 - planlagt kjoring holder dashboardet oppdatert
 - GitHub Actions kjører testene
 - Playwright leverer rapportene
@@ -24,10 +24,11 @@ LEK-TestLab2 er et enkelt GitHub Pages-dashboard som viser Playwright-resultater
 
 ## Hvordan det kjores
 
-- Når du pusher til `main`, kjører GitHub Actions testene automatisk.
+- Når du pusher til `staging`, kjører GitHub Actions testene automatisk.
 - Workflowen kan fortsatt kjøres manuelt fra GitHub om du ønsker det.
 - I tillegg kjøres den automatisk jevnlig for å holde dashboardet oppdatert.
 - Dashboardet viser siste publiserte sannhet fra Playwright.
+- `main` skal være det som allerede er testet ferdig i `staging`.
 
 ## Lokal bruk
 
