@@ -203,14 +203,50 @@ function renderAttachments(container, test, run) {
   container.replaceChildren(...attachments);
 }
 
-async function copyPrompt(button, feedback, promptText) {
+function collectAttachmentUrls(test, run) {
+  return {
+    screenshot: publicUrl(run, relativeAssetPath(test.attachments?.screenshot)),
+    video: publicUrl(run, relativeAssetPath(test.attachments?.video)),
+    trace: publicUrl(run, relativeAssetPath(test.attachments?.trace))
+  };
+}
+
+function toAiBundle(test, run) {
+  const likelyFiles = [test.file].filter(Boolean).join(', ') || 'Ukjente filer';
+  const actual = test.errorText || 'Se Playwright-rapport for eksakt feiltekst.';
+  const attachments = collectAttachmentUrls(test, run);
+
+  return [
+    'LEK-BIENS-VOKTER FIX REQUEST',
+    `STATUS: ${test.status.toUpperCase()}`,
+    `STAGING_COMMIT: ${run.shortSha || 'ukjent'}`,
+    `TEST_TITLE: ${test.title}`,
+    `PROJECT: ${test.projectName || 'ukjent'}`,
+    `FAIL_LOCATION: ${test.file}${test.line ? `:${test.line}` : ''}`,
+    `EXPECTED_BEHAVIOR: Flyten skal fullfores uten feil i staging.`,
+    `ACTUAL_BEHAVIOR: ${actual}`,
+    `USER_ACTION: ${test.title}`,
+    `MANUAL_REPRO: Gjenta flyten i staging og sammenlign med commit ${run.shortSha || 'ukjent'}.`,
+    `LIKELY_FILES: ${likelyFiles}`,
+    `SCREENSHOT_URL: ${attachments.screenshot || 'mangler'}`,
+    `VIDEO_URL: ${attachments.video || 'mangler'}`,
+    `TRACE_URL: ${attachments.trace || 'mangler'}`,
+    'FIX_REQUIREMENT: Lag en ekte produktfiks. Ikke svekk eller endre testen for a skjule problemet.',
+    '',
+    'PROMPT:',
+    toFixPrompt(test, run)
+  ].join('\n');
+}
+
+async function copyText(button, feedback, text, doneLabel) {
   try {
-    await navigator.clipboard.writeText(promptText);
-    feedback.textContent = 'Fiksprompt kopiert.';
+    await navigator.clipboard.writeText(text);
+    feedback.textContent = doneLabel;
+    const originalLabel = button.dataset.label || button.textContent;
     button.textContent = 'Kopiert';
     window.setTimeout(() => {
       feedback.textContent = '';
-      button.textContent = 'Kopier fiksprompt';
+      button.textContent = originalLabel;
     }, 1800);
   } catch {
     feedback.textContent = 'Kunne ikke kopiere automatisk.';
@@ -241,6 +277,7 @@ function createTestCards(items, run, options = {}) {
     const urgentBox = fragment.querySelector('.urgent-box');
     const detailGrid = fragment.querySelector('.detail-grid');
     const attachmentRow = fragment.querySelector('.attachment-row');
+    const copyBundleButton = fragment.querySelector('.copy-bundle-button');
     const copyButton = fragment.querySelector('.copy-prompt-button');
     const copyFeedback = fragment.querySelector('.copy-feedback');
     const fixPrompt = fragment.querySelector('.fix-prompt');
@@ -270,11 +307,17 @@ function createTestCards(items, run, options = {}) {
 
     if (test.status === 'failed') {
       const promptText = toFixPrompt(test, run);
+      const bundleText = toAiBundle(test, run);
       fixPrompt.textContent = promptText;
       urgentBox.textContent =
         'Dette ma fikses na: Reproduser feilen i staging, sjekk vedleggene under og send fiksprompten direkte videre.';
+      copyBundleButton.dataset.label = 'Kopier alt for feilen';
+      copyButton.dataset.label = 'Kopier fiksprompt';
+      copyBundleButton.addEventListener('click', () => {
+        copyText(copyBundleButton, copyFeedback, bundleText, 'Hele feilpakken er kopiert.');
+      });
       copyButton.addEventListener('click', () => {
-        copyPrompt(copyButton, copyFeedback, promptText);
+        copyText(copyButton, copyFeedback, promptText, 'Fiksprompt kopiert.');
       });
       if (options.failMode) {
         detailGrid.prepend(
@@ -282,6 +325,8 @@ function createTestCards(items, run, options = {}) {
         );
       }
     } else {
+      copyBundleButton.disabled = true;
+      copyBundleButton.textContent = 'Ingen feilpakke';
       urgentBox.textContent = '';
       fixPrompt.textContent = `Ingen fiksprompt nodvendig. Testen endte som ${test.status.toUpperCase()}.`;
       copyButton.disabled = true;

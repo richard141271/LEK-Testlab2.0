@@ -284,7 +284,8 @@ p {
   margin-top: 16px;
 }
 
-.copy-prompt-button {
+.copy-prompt-button,
+.copy-bundle-button {
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -293,6 +294,11 @@ p {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.copy-bundle-button {
+  background: rgba(140, 200, 255, 0.12);
+  color: #bfe2ff;
 }
 
 .copy-feedback {
