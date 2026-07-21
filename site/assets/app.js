@@ -123,15 +123,15 @@ function toFixPrompt(test, run) {
   const actual = test.errorText || 'Se Playwright-rapport for eksakt feiltekst.';
 
   return [
-    'Lag en ekte produktfiks. Ikke fiks testen.',
+    'Fiks denne produktfeilen i LEK-Biens Vokter. Ikke endre testen for a skjule problemet.',
     '',
-    `Brukerhandling: ${test.title}`,
-    `Forventet: At flyten beskrevet i testen "${test.title}" fullfores uten feil.`,
-    `Faktisk: ${actual}`,
-    `Hvor skjedde det: ${test.file}${test.line ? `:${test.line}` : ''}`,
-    `Commit: ${run.shortSha}`,
-    `Sannsynlige filer eller komponenter a undersoke: ${likelyFiles}`,
-    'Krav: Finn og rett den underliggende produktfeilen, behold testen som sann kvalitetsvakt.'
+    `Staging-commit: ${run.shortSha}`,
+    `Bruker gjorde: ${test.title}`,
+    `Forventet resultat: Flyten skal fullfores uten feil.`,
+    `Faktisk resultat: ${actual}`,
+    `Hvor feilen slo ut: ${test.file}${test.line ? `:${test.line}` : ''}`,
+    `Sannsynlige filer eller komponenter: ${likelyFiles}`,
+    'Krav: Reproduser i staging, finn den underliggende produktfeilen og lever en ekte fiks.'
   ].join('\n');
 }
 
@@ -238,6 +238,7 @@ function createTestCards(items, run, options = {}) {
     const project = fragment.querySelector('.project-pill');
     const title = fragment.querySelector('.test-title');
     const file = fragment.querySelector('.test-file');
+    const urgentBox = fragment.querySelector('.urgent-box');
     const detailGrid = fragment.querySelector('.detail-grid');
     const attachmentRow = fragment.querySelector('.attachment-row');
     const copyButton = fragment.querySelector('.copy-prompt-button');
@@ -270,6 +271,8 @@ function createTestCards(items, run, options = {}) {
     if (test.status === 'failed') {
       const promptText = toFixPrompt(test, run);
       fixPrompt.textContent = promptText;
+      urgentBox.textContent =
+        'Dette ma fikses na: Reproduser feilen i staging, sjekk vedleggene under og send fiksprompten direkte videre.';
       copyButton.addEventListener('click', () => {
         copyPrompt(copyButton, copyFeedback, promptText);
       });
@@ -279,6 +282,7 @@ function createTestCards(items, run, options = {}) {
         );
       }
     } else {
+      urgentBox.textContent = '';
       fixPrompt.textContent = `Ingen fiksprompt nodvendig. Testen endte som ${test.status.toUpperCase()}.`;
       copyButton.disabled = true;
       copyButton.textContent = 'Ingen fiksprompt';
