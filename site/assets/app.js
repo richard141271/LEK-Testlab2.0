@@ -1,5 +1,6 @@
 const summaryContainer = document.querySelector('#run-summary');
 const metaContainer = document.querySelector('#run-meta');
+const failuresContainer = document.querySelector('#failures');
 const testsContainer = document.querySelector('#tests');
 const linksContainer = document.querySelector('#run-links');
 const template = document.querySelector('#test-card-template');
@@ -202,14 +203,21 @@ function renderAttachments(container, test, run) {
   container.replaceChildren(...attachments);
 }
 
-function renderTests(items, run) {
-  if (!items.length) {
-    testsContainer.replaceChildren(
-      emptyState('Ingen Playwright-resultater ble funnet ennå. GitHub Actions lager nye resultater automatisk.')
-    );
-    return;
+async function copyPrompt(button, feedback, promptText) {
+  try {
+    await navigator.clipboard.writeText(promptText);
+    feedback.textContent = 'Fiksprompt kopiert.';
+    button.textContent = 'Kopiert';
+    window.setTimeout(() => {
+      feedback.textContent = '';
+      button.textContent = 'Kopier fiksprompt';
+    }, 1800);
+  } catch {
+    feedback.textContent = 'Kunne ikke kopiere automatisk.';
   }
+}
 
+function createTestCards(items, run, options = {}) {
   const sortedItems = [...items].sort((left, right) => {
     const statusWeight = {
       failed: 0,
@@ -223,7 +231,7 @@ function renderTests(items, run) {
     return left.title.localeCompare(right.title, 'nb');
   });
 
-  const cards = sortedItems.map((test) => {
+  return sortedItems.map((test) => {
     const fragment = template.content.cloneNode(true);
     const card = fragment.querySelector('.test-card');
     const status = fragment.querySelector('.status-pill');
@@ -232,6 +240,8 @@ function renderTests(items, run) {
     const file = fragment.querySelector('.test-file');
     const detailGrid = fragment.querySelector('.detail-grid');
     const attachmentRow = fragment.querySelector('.attachment-row');
+    const copyButton = fragment.querySelector('.copy-prompt-button');
+    const copyFeedback = fragment.querySelector('.copy-feedback');
     const fixPrompt = fragment.querySelector('.fix-prompt');
 
     status.dataset.status = test.status;
@@ -239,6 +249,7 @@ function renderTests(items, run) {
     project.textContent = test.projectName;
     title.textContent = test.title;
     file.textContent = `${test.file}${test.line ? `:${test.line}` : ''}`;
+    card.dataset.priority = test.status === 'failed' ? 'fail' : 'normal';
 
     const manualCheck = `Gjenta flyten "${test.title}" manuelt i staging og sammenlign med commit ${run.shortSha}.`;
     const verifiedText = test.status === 'passed' ? test.title : 'Flyten feilet i staging og krever produktfiks.';
@@ -257,14 +268,44 @@ function renderTests(items, run) {
     renderAttachments(attachmentRow, test, run);
 
     if (test.status === 'failed') {
-      fixPrompt.textContent = toFixPrompt(test, run);
+      const promptText = toFixPrompt(test, run);
+      fixPrompt.textContent = promptText;
+      copyButton.addEventListener('click', () => {
+        copyPrompt(copyButton, copyFeedback, promptText);
+      });
+      if (options.failMode) {
+        detailGrid.prepend(
+          createDetail('Hva skal fikses', 'Undersok flyten, reproducer i staging og bruk fiksprompten direkte i LEK-Biens Vokter.')
+        );
+      }
     } else {
       fixPrompt.textContent = `Ingen fiksprompt nodvendig. Testen endte som ${test.status.toUpperCase()}.`;
+      copyButton.disabled = true;
+      copyButton.textContent = 'Ingen fiksprompt';
     }
 
     return card;
   });
+}
 
+function renderTests(items, run) {
+  if (!items.length) {
+    const state = emptyState('Ingen Playwright-resultater ble funnet ennå. GitHub Actions lager nye resultater automatisk.');
+    failuresContainer.replaceChildren(state.cloneNode(true));
+    testsContainer.replaceChildren(state);
+    return;
+  }
+
+  const failedItems = items.filter((test) => test.status === 'failed');
+  if (failedItems.length) {
+    failuresContainer.replaceChildren(...createTestCards(failedItems, run, { failMode: true }));
+  } else {
+    failuresContainer.replaceChildren(
+      emptyState('Ingen feil i siste staging-kjoring. Det er ingen a sende videre akkurat na.')
+    );
+  }
+
+  const cards = createTestCards(items, run);
   testsContainer.replaceChildren(...cards);
 }
 

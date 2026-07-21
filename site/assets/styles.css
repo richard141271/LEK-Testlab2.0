@@ -206,6 +206,11 @@ p {
   border-radius: 18px;
 }
 
+.test-card[data-priority="fail"] {
+  border-color: rgba(255, 107, 107, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.14);
+}
+
 .status-pill,
 .project-pill,
 .link-chip {
@@ -254,6 +259,31 @@ p {
 .attachment-row,
 .fix-prompt {
   margin-top: 16px;
+}
+
+.prompt-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.copy-prompt-button {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.copy-feedback {
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .fix-prompt {

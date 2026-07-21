@@ -53,6 +53,16 @@
       <section class="panel">
         <div class="panel-header">
           <div>
+            <p class="eyebrow">Kritisk Fokus</p>
+            <h2>Fail forst</h2>
+          </div>
+        </div>
+        <div id="failures" class="test-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
             <p class="eyebrow">Testliste</p>
             <h2>Pass, fail og skip</h2>
           </div>
@@ -71,6 +81,10 @@
         <p class="test-file"></p>
         <div class="detail-grid"></div>
         <div class="attachment-row"></div>
+        <div class="prompt-actions">
+          <button class="copy-prompt-button" type="button">Kopier fiksprompt</button>
+          <span class="copy-feedback" aria-live="polite"></span>
+        </div>
         <pre class="fix-prompt"></pre>
       </article>
     </template>
